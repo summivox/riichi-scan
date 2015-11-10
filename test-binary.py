@@ -12,9 +12,19 @@ from copy import copy
 from lib.imgproc import *
 from lib.rect import Rect
 
+## REQUIRE an input like a line,
+## and tiles lined-up with similar height
 
-img = cv2.imread('./photo/white-bg.png')
-#img = cv2.imread('./photo/line2.png')
+
+def filter_noise(rects):
+    rects = [r for r in rects if \
+        r.h > 50 and r.w > 50       # minimum allowed size for a box
+            ]
+    return rects
+
+
+#img = cv2.imread('./photo/white-bg.png')
+img = cv2.imread('./photo/line2.png')
 # TODO judge background color, if white, use less blur, important
 gray = 255 - power_togray(img)
 gray = cv2.GaussianBlur(gray, (5,5), 1)
@@ -35,12 +45,14 @@ boxes = [cv2.boundingRect(k) for k in contours]
 rects = [Rect(*b) for b in boxes]
 
 rects = merge_rects(rects)
+rects = filter_noise(rects)
+
 empty = np.zeros(edges.shape, dtype='uint8')
-empty = gray
+empty = img
 for r in rects:
     pt1 = (r.x0, r.y0)
     pt2 = (r.x1, r.y1)
-    cv2.rectangle(empty, pt1, pt2, (255,), 1)
+    cv2.rectangle(empty, pt1, pt2, (255,0,0), 1)
 
 show_img(empty)
 
