@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from collections import defaultdict
+import copy
 
 def show_img_mat(img):
     if img.shape[0] == 3 and len(img.shape) == 3 and img.shape[2] != 3:
@@ -43,3 +44,13 @@ def merge_rects(rects):
         else:
             res.append(r)
     return res
+
+def draw_rects(img, rects):
+    ret = copy.copy(img)
+    if ret.ndim == 2:
+        ret = cv2.cvtColor(ret, cv2.COLOR_GRAY2BGR)
+    for r in rects:
+        pt1 = (r.x0, r.y0)
+        pt2 = (r.x1, r.y1)
+        cv2.rectangle(ret, pt1, pt2, (0,0,255), 1)
+    return ret
