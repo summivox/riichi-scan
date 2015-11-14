@@ -1,0 +1,1 @@
+ f2 = @(im) edge((double(rgb2gray(im))/255).^1.5, 'canny', 0.1);
