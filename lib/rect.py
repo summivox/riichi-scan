@@ -31,6 +31,14 @@ class Rect(object):
     def y1(self):
         return self.y + self.h - 1
 
+    def update(self, r):
+        self.x = min(self.x0, r.x0)
+        self.y = min(self.y0, r.y0)
+        x1 = max(self.x1, r.x1)
+        self.w = x1 - self.x0 + 1
+        y1 = max(self.y1, r.y1)
+        self.h = y1 - self.y0 + 1
+
     def copy(self):
         new = type(self)()
         for i in self.__slots__:

@@ -6,6 +6,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 import cv2
 from collections import defaultdict
 import copy
@@ -54,3 +55,11 @@ def draw_rects(img, rects):
         pt2 = (r.x1, r.y1)
         cv2.rectangle(ret, pt1, pt2, (0,0,255), 1)
     return ret
+
+def pca_rot(img):
+    idxs = np.nonzero(img)
+    idxs = np.transpose(idxs)
+    pca = PCA(n_components=1)
+    pca.fit(idxs)
+    # dy, dx
+    return pca.components_[0]
