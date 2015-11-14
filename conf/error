@@ -1,0 +1,29 @@
+[ 50%] Building C object lib/TH/CMakeFiles/TH_static.dir/THLapack.c.o
+[ 51%] Building C object lib/TH/CMakeFiles/TH_static.dir/THLogAdd.c.o
+[ 52%] Building C object lib/TH/CMakeFiles/TH_static.dir/THRandom.c.o
+[ 54%] Building C object lib/TH/CMakeFiles/TH_static.dir/THFile.c.o
+[ 55%] Building C object lib/TH/CMakeFiles/TH_static.dir/THDiskFile.c.o
+[ 57%] Building C object lib/TH/CMakeFiles/TH_static.dir/THMemoryFile.c.o
+[ 58%] Building C object lib/TH/CMakeFiles/TH_static.dir/THAtomic.c.o
+[ 60%] Building C object lib/TH/CMakeFiles/TH_static.dir/generic/simd/convolve.c.o
+[ 61%] Building C object lib/TH/CMakeFiles/TH_static.dir/generic/simd/convolve5x5_sse.c.o
+[ 63%] Building C object lib/TH/CMakeFiles/TH_static.dir/generic/simd/convolve5x5_avx.c.o
+cc: internal compiler error: Killed (program cc1)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See <https://bugs.archlinux.org/> for instructions.
+lib/TH/CMakeFiles/TH_static.dir/build.make:134: recipe for target 'lib/TH/CMakeFiles/TH_static.dir/T
+HTensor.c.o' failed
+make[2]: *** [lib/TH/CMakeFiles/TH_static.dir/THTensor.c.o] Error 4
+make[2]: *** Waiting for unfinished jobs....
+CMakeFiles/Makefile2:284: recipe for target 'lib/TH/CMakeFiles/TH_static.dir/all' failed
+make[1]: *** [lib/TH/CMakeFiles/TH_static.dir/all] Error 2
+make[1]: *** Waiting for unfinished jobs....
+[ 64%] Building C object lib/TH/CMakeFiles/TH.dir/THDiskFile.c.o
+[ 66%] Linking C static library libtorch.a
+[ 67%] Building C object lib/TH/CMakeFiles/TH.dir/THMemoryFile.c.o
+[ 69%] Building C object lib/TH/CMakeFiles/TH.dir/THAtomic.c.o
+[ 70%] Building C object lib/TH/CMakeFiles/TH.dir/generic/simd/convolve.c.o
+[ 72%] Building C object lib/TH/CMakeFiles/TH.dir/generic/simd/convolve5x5_sse.c.o
+[ 73%] Building C object lib/TH/CMakeFiles/TH.dir/generic/simd/convolve5x5_avx.c.o
+[ 73%] Built target torch_static
