@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import os
 
-RATIO = 1.7
+RATIO = 1.3
 
 def split(img, n):
     start = 0

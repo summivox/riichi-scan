@@ -18,10 +18,10 @@ def detect_boundingbox(img):
                 ]
         return rects
 
-# TODO judge background color, if white, use less blur, important
+# TODO judge background color, if white, use less blur, no power, important
     gray = (255 - power_togray(img)).astype('float32')
     gray = np.power(gray / 255.0, 1.5)
-    #gray = cv2.GaussianBlur(gray, (5,5), 1)
+    gray = cv2.GaussianBlur(gray, (5,5), 1)
     #gray = cv2.GaussianBlur(gray, (5,5), 0.8)
 
     show_img(gray)
@@ -29,12 +29,12 @@ def detect_boundingbox(img):
     edges = cv2.Canny(gray, 50, 150)
 
     show_img(edges)
-    import sys
-    sys.exit()
+    #import sys
+    #sys.exit()
 
     dil_kern = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
     dilated = cv2.dilate(edges, dil_kern)
-    #show_img(dilated)
+    show_img(dilated)
 
     contours = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = contours[0]
@@ -50,3 +50,20 @@ def detect_boundingbox(img):
 #show_img(draw_rects(img, rects))
 
     return rects
+
+if __name__ == '__main__':
+    import cv2
+    import sys
+
+    img = cv2.imread(sys.argv[1])
+#img = cv2.imread('./photo/line2.png')
+
+    rects = detect_boundingbox(img)
+
+    vis = draw_rects(img, rects)
+    show_img(vis)
+
+    for idx, r in enumerate(rects):
+        box = img[r.y0:r.y1,r.x0:r.x1]
+        cv2.imwrite("box-{}.png".format(idx), box)
+
