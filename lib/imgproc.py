@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA
 import cv2
 from collections import defaultdict
 import copy
+from rect import Rect
 
 def show_img_mat(img):
     if img.shape[0] == 3 and len(img.shape) == 3 and img.shape[2] != 3:
@@ -63,3 +64,48 @@ def pca_rot(img):
     pca.fit(idxs)
     # dy, dx
     return pca.components_[0]
+
+def pca_getM(img):
+    comp = pca_rot(img)
+    print comp
+    if comp[1] < 0:
+        comp = comp * -1
+    rotM = cv2.getRotationMatrix2D(
+        (img.shape[1]/2,img.shape[0]/2),
+        np.arctan2(comp[0],comp[1]) * 180 / np.pi, 1)
+    return rotM
+
+def shrink_binary_img(img):
+    # return a rect
+    idxs = np.nonzero(img)
+    ymin, ymax = idxs[0].min(), idxs[0].max()
+    xmin, xmax = idxs[1].min(), idxs[1].max()
+    return Rect(xmin, ymin, xmax-xmin+1, ymax-ymin+1)
+
+def all_height(img):
+    #img: binary img
+    w = img.shape[1]
+    ret = []
+    for x in range(w):
+        col = img[:,x]
+        nz = np.nonzero(col)[0]
+        if len(nz) < 2:
+            ret.append(0)
+        else:
+            nz = nz[-1] - nz[0]
+            ret.append(nz)
+            #print nz
+    return ret
+
+def snap_up(img):
+    w = img.shape[1]
+    ret = np.zeros(img.shape)
+    for x in range(w):
+        col = img[:,x]
+        nz = np.nonzero(col)[0]
+        if len(nz) < 2:
+            continue
+        else:
+            nnz = nz[-1] - nz[0]
+            ret[:nnz,x] = img[nz[0]:nz[-1],x]
+    return ret
