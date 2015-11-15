@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import os
 
-RATIO = 1.3
+RATIO = 1.5
 
 def split(img, n):
     start = 0
@@ -38,8 +38,15 @@ def try_scan(img):
     for ntile in guesses:
         splits = split(img, ntile)
         dirname = 'split-{}'.format(ntile)
+        if os.path.isdir(dirname):
+            import shutil
+            shutil.rmtree(dirname)
         os.mkdir(dirname)
         for idx, k in enumerate(splits):
             fname = os.path.join(dirname, '{}.png'.format(idx))
             cv2.imwrite(fname, k)
 
+if __name__ == '__main__':
+    import sys
+    img = cv2.imread(sys.argv[1])
+    try_scan(img)
