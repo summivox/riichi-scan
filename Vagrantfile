@@ -26,7 +26,7 @@ Vagrant.configure(2) do |config|
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-  # config.vm.network "private_network", ip: "192.168.33.10"
+  config.vm.network "private_network", ip: "192.168.33.10"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
@@ -48,7 +48,7 @@ Vagrant.configure(2) do |config|
     # vb.gui = true
 
     # Customize the amount of memory on the VM:
-    vb.memory = "1024"
+    vb.memory = "2048"
   end
   #
   # View the documentation for the provider you are using for more
@@ -68,7 +68,15 @@ Vagrant.configure(2) do |config|
   #   sudo apt-get update
   #   sudo apt-get install -y apache2
   # SHELL
-  config.vm.provision :file, source: 'conf/.bashrc', destination: '~/.bashrc'
-  config.vm.provision :file, source: 'conf/.pythonrc', destination: '~/.pythonrc'
-  config.vm.provision :shell, path: 'conf/deps.sh'
+  config.vm.provision :file, run: 'always',
+      source: 'conf/.bashrc',
+      destination: '~/.bashrc'
+  config.vm.provision :file, run: 'always',
+      source: 'conf/.pythonrc',
+      destination: '~/.pythonrc'
+  config.vm.provision :file, run: 'always',
+      source: 'conf/jupyter_notebook_config.py',
+      destination: '~/.jupyter/jupyter_notebook_config.py'
+  config.vm.provision :shell, path: 'conf/deps.sh',
+      privileged: false, keep_color: true
 end
