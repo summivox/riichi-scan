@@ -77,6 +77,7 @@ Vagrant.configure(2) do |config|
   config.vm.provision :file, run: 'always',
       source: 'conf/jupyter_notebook_config.py',
       destination: '~/.jupyter/jupyter_notebook_config.py'
+  config.vm.provision :shell, path: 'conf/swap.sh'
   config.vm.provision :shell, path: 'conf/deps.sh',
       privileged: false, keep_color: true
 end
