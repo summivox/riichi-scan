@@ -73,4 +73,7 @@ class Rect(object):
         min_area = min([self.area(), rect.area()])
         return area * 1.0 / min_area
 
+    def roi(self, img):
+        return img[self.y0:self.y1+1,self.x0:self.x1+1]
+
     __repr__ = __str__

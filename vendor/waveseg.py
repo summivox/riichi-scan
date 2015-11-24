@@ -15,9 +15,9 @@ eng.addpath(
                  'include/waveseg'))
 
 def segment(img):
-    mm = matlab.uint8(img)
+    mm = matlab.uint8(img.tolist())
     res = eng.waveseg_color_prl07(mm)
-    res = np.asarray(res)
+    res = np.asarray(res, dtype='uint8')
     return res
 
 if __name__ == '__main__':

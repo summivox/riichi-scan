@@ -67,13 +67,12 @@ def pca_rot(img):
 
 def pca_getM(img):
     comp = pca_rot(img)
-    print comp
     if comp[1] < 0:
         comp = comp * -1
     rotM = cv2.getRotationMatrix2D(
         (img.shape[1]/2,img.shape[0]/2),
         np.arctan2(comp[0],comp[1]) * 180 / np.pi, 1)
-    return rotM
+    return rotM, comp
 
 def shrink_binary_img(img):
     # return a rect
