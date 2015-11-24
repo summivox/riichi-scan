@@ -19,7 +19,7 @@ _, gray = cv2.threshold(mingray, 200, 255, cv2.THRESH_BINARY)
 bb = shrink_binary_img(gray)
 gray = gray[bb.y0:bb.y1+1,bb.x0:bb.x1+1]
 orig_img = orig_img[bb.y0:bb.y1+1,bb.x0:bb.x1+1]
-#show_img(gray)
+show_img(gray)
 
 rotM = pca_getM(gray)
 
