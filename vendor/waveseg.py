@@ -18,6 +18,10 @@ def segment(img):
     mm = matlab.uint8(img.tolist())
     res = eng.waveseg_color_prl07(mm)
     res = np.asarray(res, dtype='uint8')
+
+    for f in ['lixo.mat', 'minimiza2.mat']:
+        if os.path.isfile(f):
+            os.unlink(f)
     return res
 
 if __name__ == '__main__':
