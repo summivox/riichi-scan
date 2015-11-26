@@ -1,0 +1,4 @@
+[submodule "vendor/include/+image/+sc"]
+	path = vendor/include/+image/+sc
+	url = https://github.com/ojwoodford/sc.git
+	branch = master
