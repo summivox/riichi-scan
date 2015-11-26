@@ -23,39 +23,13 @@ class NetworkRunner(object):
         """ input size in (height, width)"""
         # nn is the underlying neural network object to run with
         self.nn = NNTrainer(input_shape, multi_output)
-        self.multi_output = multi_output
-
-    def get_layer_by_index(self, idx):
-        """ return the instance of certain layer.
-            idx can be negative to get layers from the end
-        """
-        return self.nn.layers[idx]
-
-    def set_last_updates(self, last_updates):
-        """ set last_updates in trainer, for used in momentum
-            last_updates: list of np array for each param
-        """
-        assert len(self.nn.last_updates) == 0
-        for lu in last_updates:
-            self.nn.last_updates.append(theano.shared(lu))
 
     def finish(self, only_last=True):
         """ compile the output of each layer as theano function"""
         print "Compiling..."
-        self.funcs = []
-        for (idx, layer) in enumerate(self.nn.layers):
-            if idx != len(self.nn.layers) - 1 and only_last:
-                continue
-            if idx == len(self.nn.layers) - 1:
-                # the output layer: use likelihood of the label
-                f = theano.function([self.nn.x],
-                                     layer.p_y_given_x,
-                                    allow_input_downcast=True)
-            else:
-                # layers in the middle: use its output fed into the next layer
-                f = theano.function([self.nn.x],
-                                   layer.get_output_test(), allow_input_downcast=True)
-            self.funcs.append(f)
+        self.func = theano.function([self.nn.x],
+                             self.nn.layers[-1].p_y_given_x,
+                            allow_input_downcast=True)
 
     def _prepare_img_to_run(self, img):
         assert self.nn.batch_size == 1, \
@@ -65,19 +39,9 @@ class NetworkRunner(object):
         assert img.shape in [self.nn.input_shape[1:], self.nn.input_shape[2:]]
         return img.flatten()
 
-    def run(self, img):
-        """ return all the representations after each layer"""
-        img = self._prepare_img_to_run(img)
-        results = []
-        for (idx, layer) in enumerate(self.nn.layers):
-            # why [img]?
-            # theano needs arguments to be listed, although there is only 1 argument here
-            results.append(self.funcs[idx]([img]))
-        return results
-
     def run_only_last(self, img):
         img = self._prepare_img_to_run(img)
-        return self.funcs[-1]([img])
+        return self.func([img])
 
     def predict(self, img):
         """ return predicted label (either a list or a digit)"""
@@ -91,15 +55,7 @@ class NetworkRunner(object):
         """ parse the results and get label
             results: return value of run() or run_only_last()
         """
-        if not multi_output:
-            # the predicted results for single digit output
-            return results[-1].argmax()
-        else:
-            # predicted results for multiple digit output
-            ret = []
-            for r in results[-1]:
-                ret.append(r[0].argmax())
-            return ret
+        return results[-1].argmax()
 
 def get_nlayer_from_params(params):
     for nlayer in count():
@@ -155,24 +111,3 @@ def get_nn(filename, batch_size=1):
     nn.finish()
     nn.nn.print_config()
     return nn
-
-#def save_LR_W_img(W, n_filter):
-    #""" save W as images """
-    #for l in range(N_OUT):
-        #w = W[:,l]
-        #size = int(np.sqrt(w.shape[0] / n_filter))
-        #imgs = w.reshape(n_filter, size, size)
-        #for idx, img in enumerate(imgs):
-            #imsave('LRW-label{0}-weight{1}.jpg'.format(l, idx), img)
-
-#def save_convolved_images(nn, results):
-    #for nl in xrange(nn.n_conv_layer):
-        #layer = results[nl][0]
-        #img_shape = layer[0].shape
-        #tile_len = int(np.ceil(np.sqrt(len(layer))))
-        #tile_shape = (tile_len, int(np.ceil(len(layer) * 1.0 / tile_len)))
-        #layer = layer.reshape((layer.shape[0], -1))
-        #raster = tile_raster_images(layer, img_shape, tile_shape,
-                                    #tile_spacing=(3, 3))
-        #imsave('{0}.jpg'.format(nl), raster)
-
