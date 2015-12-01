@@ -1,5 +1,7 @@
 import os
+import sys
 import json
+import argparse
 
 import itertools
 
@@ -229,8 +231,19 @@ def output(names, prefix):
 	with open('%s.json' % prefix, 'w') as fout:
 		json.dump(p, fout)
 
-def test():
+def run(prefix):
 	# names = make_tiles_naive(-13, 0, 13)
 	names = make_tiles_baseline_norot(-13, 0, 13)
-	output(names, './b4-test4')
-test()
+	output(names, prefix)
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser(
+		prog='riichi-scan generator'
+	)
+	parser.add_argument('--prefix', required=True)
+
+	argv = sys.argv
+	argv = argv[(argv.index('--') + 1):]
+	
+	args = parser.parse_args(argv)
+	run(args.prefix)
