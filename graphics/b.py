@@ -60,17 +60,16 @@ def duplicateObject(scene, name, copyobj):
 def make_dupes(src_name, n):
 	"""
 	Make `n` duplicates of a source object specified by name.
-	Existing objects in the series are overwritten.
+	Existing objects in the series are **deleted**
 
-	e.g. `make_dupes('Cube', 10)` will make 'Cube.001', 'Cube.002', ..., 'Cube.010'
+	e.g. `make_dupes('Cube', 10)` will make 'Cube.001', 'Cube.002', ..., 'Cube.010' and
+	delete 'Cube.011', 'Cube.012', ... if they existed
 	"""
 	names = ['%s.%03d' % (src_name, i + 1) for i in range(n)]
 
-	# delete existing objects in the series
+	# delete all existing objects in the series
 	O.object.select_all(action='DESELECT')
-	for name in names:
-		if name in D.objects:
-			D.objects[name].select = True
+	O.object.select_pattern(pattern=(src_name + '.*'))
 	O.object.delete()
 	O.object.select_all(action='DESELECT')
 
@@ -81,6 +80,11 @@ def make_dupes(src_name, n):
 	O.object.select_all(action='DESELECT')
 
 	return names
+
+def render_to_file(filename):
+	""" Render active camera to `filename` """
+	C.scene.render.filepath = os.path.realpath(filename)
+	O.render.render(write_still=True)
 
 
 
@@ -101,6 +105,49 @@ def make_tiles_naive(x0, y0, n):
 		o.rotation_euler.z = 0
 		o.hide = False
 		o.hide_render = False
+	return names
+
+def make_tiles_baseline_norot(x0, y0, n, **kwargs):
+	"""
+	Slightly more sophisticated tile-maker.
+	Options:
+		sigma_dy: std dev of dy (y = y0 + dy) [cm]
+		prob_h: probability of any tile being horizontal instead of vertical [0 <= p <= 1]
+		min_g: min size of gap [cm]
+		prob_g: probability of deliberate gap insertion [0 <= p <= 1]
+		mean_g: mean size of a deliberate gap [cm]
+	"""
+	sigma_dy = kwargs.get('sigma_dy', tile_l*0.05)
+	prob_h = kwargs.get('prob_h', 2/14)
+	min_g = kwargs.get('min_g', tile_w*0.01)
+	prob_g = kwargs.get('prob_g', 2/14)
+	mean_g = kwargs.get('mean_g', tile_w*0.1)
+
+	names = make_dupes('Tile', n)
+	x = x0
+	for i, name in enumerate(names):
+		isHori = random.random() < prob_h
+		isGapBig = random.random() < prob_g
+		if isGapBig:
+			gap = max(min_g, random.expovariate(1/mean_g))
+		else:
+			gap = min_g
+		dy = random.gauss(0, sigma_dy)
+
+		if isHori:
+			sx = tile_l; sy = tile_w; rot = -pi/2
+			dy = dy - (tile_l - tile_w)/2
+		else:
+			sx = tile_w; sy = tile_l; rot = 0
+
+		o = D.objects[name]
+		o.location = Vector((x + sx/2, y0 + dy, 0))
+		o.rotation_euler.z = rot
+		o.hide = False
+		o.hide_render = False
+
+		x = x + sx + gap
+	
 	return names
 
 
@@ -170,18 +217,20 @@ def project_world_to_picture(m_cam, P):
 	return p
 
 
-def test():
-	prefix = 'b3-test3'
+########################################
+# main
+
+def output(names, prefix):
+	""" render to "${prefix}.png" and output point list to "${prefix}.json" """
+	render_to_file('%s.png' % prefix)
 	m_cam = get_camera()
-	names = make_tiles_naive(-13, 0, 13)
-
-	# render
-	C.scene.render.filepath = os.path.realpath('./%s.png' % prefix)
-	O.render.render(write_still=True)
-
-	# points
-	p = [list(project_world_to_picture(m_cam, p).round()) for name in names for p in get_tile_face_3D(name)]
+	p = [list(project_world_to_picture(m_cam, p).round())
+			for name in names for p in get_tile_face_3D(name)]
 	with open('%s.json' % prefix, 'w') as fout:
 		json.dump(p, fout)
 
+def test():
+	# names = make_tiles_naive(-13, 0, 13)
+	names = make_tiles_baseline_norot(-13, 0, 13)
+	output(names, './b4-test4')
 test()
