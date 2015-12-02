@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-blender b4.blend --background --python b.py -- --prefix=./b4-test4
+blender b5.blend --background --python b.py -- --prefix=./b5-test1

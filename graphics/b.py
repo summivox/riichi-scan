@@ -78,7 +78,7 @@ def make_dupes(src_name, n):
 	# clone source object `n` times
 	D.objects[src_name].select = True
 	for i in range(n):
-		O.object.duplicate()
+		O.object.duplicate_move_linked()
 	O.object.select_all(action='DESELECT')
 
 	C.scene.update()
@@ -90,6 +90,48 @@ def render_to_file(filename):
 	O.render.render(write_still=True)
 
 
+########################################
+# Material/texture generation
+
+TILE_NAMES = (
+	['%d%s' % (n, 'mps'[s]) for s in range(3) for n in range(10)] +
+	['%dz' % n for n in range(1, 8)]
+)
+get_tile_image_path = lambda n: '//assets/tenhou/0-%s.png' % n
+
+def make_textures(mat_base_name):
+	"""
+	Generate mat/tex pairs for all kinds of tiles based on material specified by `name`
+	Return: dict mapping tile name to material name
+	"""
+	mat_base = D.materials[mat_base_name]
+	tex_base = mat_base.texture_slots[0].texture
+	tex_base_name = tex_base.name
+
+	tile_to_mat = {}
+
+	for tile_name in TILE_NAMES:
+		mat_name = '%s-%s' % (mat_base_name, tile_name)
+		tex_name = '%s-%s' % (tex_base_name, tile_name)
+		tile_to_mat[tile_name] = mat_name
+
+		if mat_name in D.materials:
+			D.materials.remove(D.materials[mat_name])
+		mat = mat_base.copy()
+		mat.name = mat_name
+
+		if tex_name in D.textures:
+			D.textures.remove(D.textures[tex_name])
+		tex = tex_base.copy()
+		tex.name = tex_name
+
+		img = D.images.load(get_tile_image_path(tile_name))
+		tex.image = img
+		mat.texture_slots[0].texture = tex
+
+	return tile_to_mat
+
+TILE_TO_MAT = make_textures('mat-tile') # FIXME: hard-coded autorun
 
 
 ########################################
@@ -137,6 +179,8 @@ def make_tiles_baseline_norot(x0, y0, n, **kwargs):
 		else:
 			gap = min_g
 		dy = random.gauss(0, sigma_dy)
+		tile_name = random.sample(TILE_NAMES, 1)[0]
+		mat_name = TILE_TO_MAT[tile_name]
 
 		if isHori:
 			sx = tile_l; sy = tile_w; rot = -pi/2
@@ -149,18 +193,20 @@ def make_tiles_baseline_norot(x0, y0, n, **kwargs):
 		o.rotation_euler.z = rot
 		o.hide = False
 		o.hide_render = False
+		o.material_slots[0].material = D.materials[mat_name]
 
 		x = x + sx + gap
-	
+
 	C.scene.update()
 	return names
+
 
 
 ########################################
 # Camera & Geometry
 
 def get_camera_intrinsic():
-	""" 
+	"""
 	Calculate camera intrinsic matrix (3r3c)
 	NOTE:
 	-	Blender convention: z axis positive direction: towards back of camera
@@ -258,10 +304,6 @@ def set_camera_random_naive(names, **kwargs):
 	tilt = random.random()*(tilt_hi - tilt_lo) + tilt_lo
 	scale = random.random()*(scale_hi - scale_lo) + scale_lo
 
-	print(pan/DEG)
-	print(tilt/DEG)
-	print(scale)
-
 	r = set_camera_pan_tilt_fit_scale(pan, tilt, names, scale)
 
 	# random translation: ghetto estimate of visible range
@@ -271,14 +313,8 @@ def set_camera_random_naive(names, **kwargs):
 	dx_max = scale*w_2f*r
 	dy_max = scale*h_2f*r
 
-	print(dx_max)
-	print(dy_max)
-
 	dx = (random.random()*2 - 1) * dx_max * 0.9
 	dy = (random.random()*2 - 1) * dy_max * 0.9
-
-	print(dx)
-	print(dy)
 
 	move_camera_local([dx, dy, 0])
 
@@ -335,7 +371,7 @@ def main():
 
 	argv = sys.argv
 	argv = argv[(argv.index('--') + 1):]
-	
+
 	args = parser.parse_args(argv)
 	run(args.prefix)
 
