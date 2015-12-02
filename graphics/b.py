@@ -118,25 +118,27 @@ def make_textures(mat_base_name):
 		img_path = get_tile_image_path(tile_name)
 		tile_to_mat[tile_name] = mat_name
 
-		if img_name in D.images:
-			img = D.images[img_name]
-		else:
-			img = D.images.load(get_tile_image_path(tile_name))
-			img.name = img_name
+		# rebuild mat->tex->img dependency chain
 
 		if mat_name in D.materials:
 			mat = D.materials[mat_name]
-			# mat.user_clear()
 			D.materials.remove(mat)
 		mat = mat_base.copy()
 		mat.name = mat_name
 
 		if tex_name in D.textures:
 			tex = D.textures[tex_name]
-			# tex.user_clear()
 			D.textures.remove(tex)
 		tex = tex_base.copy()
 		tex.name = tex_name
+
+		if img_name in D.images:
+			img = D.images[img_name]
+			img.filepath = img_path
+			img.update()
+		else:
+			img = D.images.load(img_path)
+			img.name = img_name
 
 		tex.image = img
 		mat.texture_slots[0].texture = tex
