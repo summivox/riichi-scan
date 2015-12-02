@@ -113,25 +113,40 @@ def make_textures(mat_base_name):
 	for tile_name in TILE_NAMES:
 		mat_name = '%s-%s' % (mat_base_name, tile_name)
 		tex_name = '%s-%s' % (tex_base_name, tile_name)
+		img_name = 'img-tile-%s' % (tile_name)
+
+		img_path = get_tile_image_path(tile_name)
 		tile_to_mat[tile_name] = mat_name
 
+		if img_name in D.images:
+			img = D.images[img_name]
+		else:
+			img = D.images.load(get_tile_image_path(tile_name))
+			img.name = img_name
+
 		if mat_name in D.materials:
-			D.materials.remove(D.materials[mat_name])
+			mat = D.materials[mat_name]
+			# mat.user_clear()
+			D.materials.remove(mat)
 		mat = mat_base.copy()
 		mat.name = mat_name
 
 		if tex_name in D.textures:
-			D.textures.remove(D.textures[tex_name])
+			tex = D.textures[tex_name]
+			# tex.user_clear()
+			D.textures.remove(tex)
 		tex = tex_base.copy()
 		tex.name = tex_name
 
-		img = D.images.load(get_tile_image_path(tile_name))
 		tex.image = img
 		mat.texture_slots[0].texture = tex
 
 	return tile_to_mat
 
-TILE_TO_MAT = make_textures('mat-tile') # FIXME: hard-coded autorun
+# FIXME: hard-coded hacky autorun
+make_dupes('Tile', 0)
+C.scene.update()
+TILE_TO_MAT = make_textures('mat-tile')
 
 
 ########################################
