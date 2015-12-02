@@ -27,6 +27,7 @@ tile_h = 1.60
 ########################################
 # Alias
 
+DEG = pi/180
 C = bpy.context
 D = bpy.data
 O = bpy.ops
@@ -58,7 +59,6 @@ def duplicateObject(scene, name, copyobj):
 
 	return ob_new
 
-
 def make_dupes(src_name, n):
 	"""
 	Make `n` duplicates of a source object specified by name.
@@ -81,6 +81,7 @@ def make_dupes(src_name, n):
 		O.object.duplicate()
 	O.object.select_all(action='DESELECT')
 
+	C.scene.update()
 	return names
 
 def render_to_file(filename):
@@ -107,6 +108,7 @@ def make_tiles_naive(x0, y0, n):
 		o.rotation_euler.z = 0
 		o.hide = False
 		o.hide_render = False
+	C.scene.update()
 	return names
 
 def make_tiles_baseline_norot(x0, y0, n, **kwargs):
@@ -150,11 +152,12 @@ def make_tiles_baseline_norot(x0, y0, n, **kwargs):
 
 		x = x + sx + gap
 	
+	C.scene.update()
 	return names
 
 
 ########################################
-# Geometry
+# Camera & Geometry
 
 def get_camera_intrinsic():
 	""" 
@@ -168,9 +171,9 @@ def get_camera_intrinsic():
 	image_w = render.resolution_x * kr
 	image_h = render.resolution_y * kr
 
-	cd = C.scene.camera.data
-	f_w = 1/(2*tan(cd.angle/2)) # focal length over sensor width
-	if cd.sensor_fit == 'HORIZONTAL':
+	cam_d = C.scene.camera.data
+	f_w = 1/(2*tan(cam_d.angle/2)) # focal length over sensor width
+	if cam_d.sensor_fit == 'HORIZONTAL':
 		ks = f_w*image_w
 	else:
 		ks = f_w*image_h
@@ -193,6 +196,91 @@ def get_camera_extrinsic():
 def get_camera():
 	""" Calculate camera matrix (3r4c = intrinsic 3r3c * extrinsic 3r4c) """
 	return get_camera_intrinsic() * get_camera_extrinsic()
+
+def set_camera_pan_tilt(pan, tilt):
+	"""
+	Set orientation of camera to given pan and tilt angles, with roll = 0 .
+	Both angles are in radian. x axis of camera remains parallel to world xy plane.
+	pan: angle between (camera +x) and (world +x)
+	tilt: angle between (camera -y) and (world xy)
+		NOTE: positive tilt => camera points downward
+	"""
+	cam = C.scene.camera
+	cam.rotation_mode = 'XYZ'
+	cam.rotation_euler = Euler((pi/2 - tilt, 0, pan), 'XYZ')
+
+def fit_camera_to_objects(names):
+	O.object.select_all(action='DESELECT')
+	for name in names:
+		D.objects[name].select = True
+	O.view3d.camera_to_view_selected()
+	O.object.select_all(action='DESELECT')
+
+def move_camera_local(dp):
+	"""
+	Translate camera with given vector `dp` in its local frame
+	"""
+	cam = C.scene.camera
+	dph = np.asarray(list(dp) + [1])
+	loc = np.asarray(cam.matrix_world).dot(dph)
+	cam.location = Vector(tuple(loc[0:3]))
+	C.scene.update()
+
+def set_camera_pan_tilt_fit_scale(pan, tilt, names, scale):
+	"""
+	Set orientation of camera, fit view to objects, then move camera away by a fraction of
+	its distance to intersection point of camera z axis with world xy plane
+
+	Return: distance to intersection point before scaling
+	"""
+	set_camera_pan_tilt(pan, tilt)
+	fit_camera_to_objects(names)
+	cam = C.scene.camera
+	z = cam.location.z
+	r = z/sin(tilt)
+	move_camera_local([0, 0, r*scale])
+	return r
+
+def set_camera_random_naive(names, **kwargs):
+	"""
+	1.	`set_camera_pan_tilt_fit_scale` with random pan/tilt/scale
+	2.	apply random camera plane translation while keeping all objects in picture
+	Options:
+	-	pan_range: (min, max) of pan angle [rad]
+	-	tilt_range: (min, max) of tilt angle [rad]
+	-	scale_range: (min, max) of scale factor
+	"""
+
+	pan_lo, pan_hi = kwargs.get('pan_range', (-15*DEG, +15*DEG))
+	tilt_lo, tilt_hi = kwargs.get('tilt_range', (45*DEG, 90*DEG))
+	scale_lo, scale_hi = kwargs.get('scale_range', (0.1, 0.3))
+	pan = random.random()*(pan_hi - pan_lo) + pan_lo
+	tilt = random.random()*(tilt_hi - tilt_lo) + tilt_lo
+	scale = random.random()*(scale_hi - scale_lo) + scale_lo
+
+	print(pan/DEG)
+	print(tilt/DEG)
+	print(scale)
+
+	r = set_camera_pan_tilt_fit_scale(pan, tilt, names, scale)
+
+	# random translation: ghetto estimate of visible range
+	cam_d = C.scene.camera.data
+	w_2f = cam_d.sensor_width / cam_d.lens / 2
+	h_2f = cam_d.sensor_height / cam_d.lens / 2
+	dx_max = scale*w_2f*r
+	dy_max = scale*h_2f*r
+
+	print(dx_max)
+	print(dy_max)
+
+	dx = (random.random()*2 - 1) * dx_max * 0.9
+	dy = (random.random()*2 - 1) * dy_max * 0.9
+
+	print(dx)
+	print(dy)
+
+	move_camera_local([dx, dy, 0])
 
 
 def get_tile_face_3D(name):
@@ -218,6 +306,11 @@ def project_world_to_picture(m_cam, P):
 	p = ph[0:2]/ph[2]
 	return p
 
+def get_all_tile_face_2D(m_cam, names):
+	""" flattened list of all corner points of faces of all tiles """
+	return [list(project_world_to_picture(m_cam, p).round())
+		for name in names for p in get_tile_face_3D(name)]
+
 
 ########################################
 # main
@@ -226,20 +319,18 @@ def output(names, prefix):
 	""" render to "${prefix}.png" and output point list to "${prefix}.json" """
 	render_to_file('%s.png' % prefix)
 	m_cam = get_camera()
-	p = [list(project_world_to_picture(m_cam, p).round())
-			for name in names for p in get_tile_face_3D(name)]
+	p = get_all_tile_face_2D(m_cam, names);
 	with open('%s.json' % prefix, 'w') as fout:
 		json.dump(p, fout)
 
 def run(prefix):
 	# names = make_tiles_naive(-13, 0, 13)
 	names = make_tiles_baseline_norot(-13, 0, 13)
+	set_camera_random_naive(names)
 	output(names, prefix)
 
-if __name__ == '__main__':
-	parser = argparse.ArgumentParser(
-		prog='riichi-scan generator'
-	)
+def main():
+	parser = argparse.ArgumentParser(prog='riichi-scan generator')
 	parser.add_argument('--prefix', required=True)
 
 	argv = sys.argv
@@ -247,3 +338,6 @@ if __name__ == '__main__':
 	
 	args = parser.parse_args(argv)
 	run(args.prefix)
+
+if __name__ == '__main__':
+	main()
