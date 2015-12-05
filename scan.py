@@ -16,7 +16,7 @@ def split(img, n):
 
     #padx = int(0.08 * img.shape[0])
     #pady = int(0.16 * img.shape[0])
-    dx = 3
+    dx = 2
 
     for _ in range(n):
         left = max(0, start-dx)

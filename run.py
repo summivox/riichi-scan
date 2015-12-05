@@ -15,7 +15,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 from lib.imgproc import *
-from scan import try_scan
+import scan
+
+import nnlib.driver as nn_driver
+
+TILES = ['1m','1p','1s','1z','2m','2p','2s','2z','3m','3p','3s','3z','4m','4p','4s','4z','5m','5p','5s','5z','6m','6p','6s','6z','7m','7p','7s','7z','8m','8p','8s','9m','9p','9s', 'neg']
+nn_driver.load_model(os.path.join(os.path.dirname(__file__), 'nnlib',
+                                     'model.mdl'))
+TILE_RATIO_RANGE = (1.4, 1.7)
 
 def set_logger(args):
     try:
@@ -90,6 +97,19 @@ def rotate(mask, img):
                   cv2.INTER_CUBIC, cv2.BORDER_CONSTANT)
     return (mask, img)
 
+def recog_batch(imgs):
+    ret = []
+    for img in imgs:
+        #pady = int(0.08 * img.shape[0])
+        #img = cv2.copyMakeBorder(img, pady, pady, 0, 0, cv2.BORDER_CONSTANT, value=(0,0,0))
+        #show_img_mat(img)
+
+        img = cv2.resize(img, (50, 70))
+        prob, pred = nn_driver.predict(img)
+        ret.append((TILES[pred], prob[pred]))
+    return ret
+
+
 if __name__ == '__main__':
     global args
     args = get_args()
@@ -133,6 +153,7 @@ if __name__ == '__main__':
     pad = median_height / 1.4 * 0.1
     bbox.x = max(0, bbox.x0 - pad)
     bbox.w = min(bbox.x1 + 1 + pad, w) - bbox.x + 1
+# TODO expand bbox up a little
 
     mask = bbox.roi(mask)
     img = bbox.roi(img)
@@ -141,3 +162,12 @@ if __name__ == '__main__':
     [mask, img] = rotate(mask, img)
     log_img('rotated2', img)
 
+    large_ratio = img.shape[1] * 1.0 / img.shape[0]
+
+    n_guess_min = int(large_ratio * TILE_RATIO_RANGE[0])
+    n_guess_max = int(large_ratio * TILE_RATIO_RANGE[1])
+    logger.info("Guess number: {}~{}".format(n_guess_min, n_guess_max))
+    for n_tile in range(n_guess_min, n_guess_max+1):
+        splits = scan.split(img, n_tile)
+        res = recog_batch(splits)
+        logger.info("Ans for n_tile={}: {}".format(n_tile, str(res)))
