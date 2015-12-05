@@ -11,6 +11,7 @@ import argparse
 import logging
 import os
 import shutil
+import operator
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -109,6 +110,17 @@ def recog_batch(imgs):
         ret.append((TILES[pred], prob[pred]))
     return ret
 
+def select_guess(results):
+# count neg
+    neg_cnt = [[x[0] for x in r].count('neg') for r in results]
+    logger.info("Negative class cnt: " + str(neg_cnt))
+    min_neg = min(neg_cnt)
+    candidates = [idx for idx, neg in enumerate(neg_cnt) if neg == min_neg]
+    results = [results[k] for k in candidates]
+    mean_scores = [np.mean([x[1] for x in r]) for r in results]
+    logger.info("Recognition mean scores: " + str(mean_scores))
+    max_score_idx = max(enumerate(mean_scores), key=operator.itemgetter(1))[0]
+    return results[max_score_idx]
 
 if __name__ == '__main__':
     global args
@@ -167,7 +179,11 @@ if __name__ == '__main__':
     n_guess_min = int(large_ratio * TILE_RATIO_RANGE[0])
     n_guess_max = int(large_ratio * TILE_RATIO_RANGE[1])
     logger.info("Guess number: {}~{}".format(n_guess_min, n_guess_max))
+    ress = []
     for n_tile in range(n_guess_min, n_guess_max+1):
         splits = scan.split(img, n_tile)
         res = recog_batch(splits)
+        ress.append(res)
         logger.info("Ans for n_tile={}: {}".format(n_tile, str(res)))
+    res = select_guess(ress)
+    print res
