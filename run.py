@@ -75,8 +75,9 @@ def noise_removal(mask):
     contours = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     boxes = [cv2.boundingRect(k) for k in contours[0]]
     rects = [Rect(b[0], b[1], b[2] + 1, b[3] + 1) for b in boxes]
+    maxh = max([r.h for r in rects])
     valid_rects = [r for r in rects if \
-        r.h > img.shape[0] * 0.2 \
+        r.h > maxh * 0.6 \
        and r.w > img.shape[1] * 0.3] # minimum allowed size for a box
     logger.info("Valid bounding boxes: " + str(valid_rects))
 
