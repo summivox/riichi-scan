@@ -370,6 +370,7 @@ def get_all_tile_face_2D(m_cam, names):
 
 def output(names, prefix):
 	""" render to "${prefix}.png" and output point list to "${prefix}.json" """
+	prefix = os.path.splitext(os.path.realpath(prefix))[0]
 	render_to_file('%s.png' % prefix)
 	m_cam = get_camera()
 	p = get_all_tile_face_2D(m_cam, names);
@@ -378,7 +379,7 @@ def output(names, prefix):
 
 def run(prefix):
 	# names = make_tiles_naive(-13, 0, 13)
-	names = make_tiles_baseline_norot(-13, 0, 13)
+	names = make_tiles_baseline_norot(-13, random.random()*15 - 7, 13)
 	set_camera_random_naive(names)
 	output(names, prefix)
 
