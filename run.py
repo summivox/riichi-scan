@@ -55,6 +55,7 @@ def get_segmented_img():
         seg_img = cv2.imread(segf)
         log_img('segmented', seg_img)
     else:
+        logger.info("Running matlab... this is slow")
         from vendor.waveseg import segment
         seg_img = segment(img)
         log_img('segmented', seg_img)
