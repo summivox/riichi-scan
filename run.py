@@ -21,8 +21,8 @@ import scan
 import nnlib.driver as nn_driver
 
 TILES = ['1m','1p','1s','1z','2m','2p','2s','2z','3m','3p','3s','3z','4m','4p','4s','4z','5m','5p','5s','5z','6m','6p','6s','6z','7m','7p','7s','7z','8m','8p','8s','9m','9p','9s', 'neg']
-nn_driver.load_model(os.path.join(os.path.dirname(__file__), 'nnlib',
-                                     'model.mdl'))
+nn_driver.load_model_recog(os.path.join(os.path.dirname(__file__), 'nnlib',
+                                     'recog.pkl'))
 TILE_RATIO_RANGE = (1.4, 1.7)
 
 def set_logger(args):
@@ -102,13 +102,16 @@ def rotate(mask, img):
 
 def recog_batch(imgs):
     ret = []
+    inputs = []
     for img in imgs:
         #pady = int(0.08 * img.shape[0])
         #img = cv2.copyMakeBorder(img, pady, pady, 0, 0, cv2.BORDER_CONSTANT, value=(0,0,0))
         #show_img_mat(img)
 
         img = cv2.resize(img, (50, 70))
-        prob, pred = nn_driver.predict(img)
+        inputs.append(img)
+    probs, preds = nn_driver.predict(inputs)
+    for pred, prob in zip(preds, probs):
         ret.append((TILES[pred], prob[pred]))
     return ret
 

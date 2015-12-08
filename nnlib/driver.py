@@ -22,8 +22,13 @@ def show_img_sync(img):
     plt.imshow(img)
     plt.show()
 
+def mean_subtract(img):
+    img = img.astype('float32')
+    mean = img.mean(axis=0).mean(axis=0)
+    return img - mean
+
 class BatchPredictor(object):
-    BATCHES = [1, 8, 16, 64]
+    BATCHES = [1, 4, 8, 16, 32, 64, 128]
     def __init__(self, pkl_filename):
         self.fname = pkl_filename
         self.init_nns()
@@ -59,15 +64,10 @@ class BatchPredictor(object):
         results = np.concatenate(results, axis=0)
         return results
 
-
-def mean_subtract(img):
-    img = img.astype('float32')
-    mean = img.mean(axis=0).mean(axis=0)
-    return img - mean
-
 def load_model_recog(filename):
     global model_recog
     model_recog = BatchPredictor(filename)
+
 def predict(imgs):
     prob = model_recog.run_batch(imgs)  # B x N_TILE
     pred = np.argmax(prob, axis=1)  # Bx1
@@ -75,7 +75,7 @@ def predict(imgs):
 
 def load_model_fcn(filename):
     global model_fcn
-    model_fcn = BatchPredictor('fcn.pkl')
+    model_fcn = BatchPredictor(filename)
 
 def detect(imgs):
     prob = model_fcn.run_batch(imgs)

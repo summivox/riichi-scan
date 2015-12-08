@@ -105,7 +105,7 @@ def build_nn_with_params(params, batch_size):
         if typename == 'convpool':
             typename = 'conv'
         layer_cls = name_cls_dict[typename]
-        print "Layer ", idx, ' is ', layer_cls
+        #print "Layer ", idx, ' is ', layer_cls
         runner.nn.add_layer(layer_cls, layerdata)
 
     print "Model Loaded."
