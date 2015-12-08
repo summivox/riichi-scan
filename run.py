@@ -132,6 +132,7 @@ if __name__ == '__main__':
     args = get_args()
 
     img = cv2.imread(args.input)
+    orig_img = img
 
 # segmentation:
     seg_img = get_segmented_img()
@@ -150,6 +151,11 @@ if __name__ == '__main__':
     bbox = shrink_binary_img(mask)
     mask = bbox.roi(mask)
     img = bbox.roi(img)
+
+    # to test line edge
+    #bbox.expand(0.15, 0.15)
+    #expand_line = bbox.safe_roi(orig_img)
+    #log_img('expand_line', expand_line)
 
     [mask, img] = rotate(mask, img)
     log_img('rotated1', img)

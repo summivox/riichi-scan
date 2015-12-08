@@ -76,4 +76,21 @@ class Rect(object):
     def roi(self, img):
         return img[self.y0:self.y1+1,self.x0:self.x1+1]
 
+    def safe_roi(self, img):
+        x0 = max(self.x0, 0)
+        x1 = min(self.x1+1, img.shape[1])
+        y0 = max(self.y0, 0)
+        y1 = min(self.y1+1, img.shape[0])
+        return img[y0:y1,x0:x1]
+
+    def expand(self, ratiox, ratioy):
+        diffx = self.w * ratiox
+        self.x = int(self.x - diffx)
+        self.w = int(self.w + 2 * diffx)
+
+        diffy = self.h * ratioy
+        self.y = int(self.y - diffy)
+        self.h = int(self.h + 2 * diffy)
+
+
     __repr__ = __str__
