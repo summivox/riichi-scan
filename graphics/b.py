@@ -150,6 +150,13 @@ make_dupes('Tile', 0)
 C.scene.update()
 TILE_TO_MAT = make_textures('mat-tile')
 
+def set_ground_hue_shift(hue_shift):
+	""" hue_shift: number from [0, 1), added to ground hue """
+	D.materials['Ground'].node_tree.nodes['HueShift'].inputs[1].default_value = hue_shift
+
+# FIXME: hard-coded hacky autorun
+set_ground_hue_shift(random.random())
+
 
 ########################################
 # Tile Makers
