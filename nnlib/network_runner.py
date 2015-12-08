@@ -19,17 +19,24 @@ from imageutil import tile_raster_images, get_image_matrix
 from layers.layers import *
 
 class NetworkRunner(object):
-    def __init__(self, input_shape, multi_output):
+    def __init__(self, input_shape):
         """ input size in (height, width)"""
         # nn is the underlying neural network object to run with
-        self.nn = NNTrainer(input_shape, multi_output)
+        self.nn = NNTrainer(input_shape)
 
     def finish(self, only_last=True):
         """ compile the output of each layer as theano function"""
         print "Compiling..."
-        self.func = theano.function([self.nn.x],
-                             self.nn.layers[-1].p_y_given_x,
-                            allow_input_downcast=True)
+        last = self.nn.layers[-1]
+        if last.NAME == 'conv':
+            # HACK for fcn
+            self.func = theano.function([self.nn.x],
+                                 T.nnet.sigmoid(last.output_test),
+                                allow_input_downcast=True)
+        else:
+            self.func = theano.function([self.nn.x],
+                                 last.p_y_given_x,
+                                allow_input_downcast=True)
 
     def _prepare_img_to_run(self, img):
         assert self.nn.batch_size == 1, \
@@ -46,16 +53,28 @@ class NetworkRunner(object):
     def predict(self, img):
         """ return predicted label (either a list or a digit)"""
         results = [self.run_only_last(img)]
-        label = NetworkRunner.get_label_from_result(img, results,
-                                                    self.multi_output)
+        label = NetworkRunner.get_label_from_result(img, results)
         return label
 
     @staticmethod
-    def get_label_from_result(img, results, multi_output):
+    def get_label_from_result(img, results):
         """ parse the results and get label
             results: return value of run() or run_only_last()
         """
         return results[-1].argmax()
+
+    def dump_params(self, filename):
+        res = {}
+        layers = self.nn.layers
+
+        for layer, cnt in izip(layers, count()):
+            # save layer type
+            dic = {'type': cls_name_dict[type(layer)] }
+            # save other layer parameters
+            dic.update(layer.get_params())
+            res['layer' + str(cnt)] = dic
+        with gzip.open(filename, 'wb') as f:
+            pickle.dump(res, f, -1)
 
 def get_nlayer_from_params(params):
     for nlayer in count():
@@ -74,14 +93,7 @@ def build_nn_with_params(params, batch_size):
     print "Size={0}".format(input_size)
 
     nlayer = get_nlayer_from_params(params)
-    last_layer = params['layer{0}'.format(nlayer - 1)]
-    if last_layer['type'] in ['ssm']:
-        multi_output = True
-    elif last_layer['type'] in ['lr']:
-        multi_output = False
-    else:
-        assert False
-    runner = NetworkRunner(input_size, multi_output)
+    runner = NetworkRunner(input_size)
 
     if 'last_updates' in params:
         runner.set_last_updates(params['last_updates'])
@@ -109,5 +121,5 @@ def get_nn(filename, batch_size=1):
     nn = build_nn_with_params(data, batch_size)
     # compile all the functions
     nn.finish()
-    nn.nn.print_config()
+    #nn.nn.print_config()
     return nn

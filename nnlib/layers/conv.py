@@ -60,8 +60,9 @@ class ConvLayer(Layer):
                                        border_mode='full')
                 mid = (int(numpy.floor(filter_shape[1] / 2.)),
                        int(numpy.floor(filter_shape[2] / 2.)))
-                # keep representation size
-                conv_out = conv_out[:, :, mid[0]:-mid[0], mid[1]:-mid[1]]
+                if mid != 0:
+                    # keep representation size
+                    conv_out = conv_out[:, :, mid[0]:-mid[0], mid[1]:-mid[1]]
             else:
                 conv_out = conv.conv2d(input=input, filters=self.W,
                         filter_shape=conv_filter_shape, image_shape=image_shape)
@@ -95,7 +96,8 @@ class ConvLayer(Layer):
                 'b': self.b.get_value(borrow=True),
                 'activation': self.activation,
                 'filter_shape': self.filter_shape,
-                'input_shape': self.image_shape }
+                'input_shape': self.image_shape,
+                'keep_size': self.keep_size}
 
     def save_params_mat(self, basename):
         """ save params in .mat format

@@ -20,23 +20,18 @@ MOMENT = 0.6
 class NNTrainer(object):
     """ Neural Network Trainer
     """
-    def __init__(self, input_image_shape, multi_output=True):
+    def __init__(self, input_image_shape):
         """ input_image_shape: 4D tuple
-            multi_output: whether a image has more than 1 labels
         """
         self.layer_config = []
         self.layers = []
         self.batch_size = input_image_shape[0]
         self.input_shape = input_image_shape
         self.rng = np.random.RandomState()
-        self.multi_output = multi_output
 
         self.x = T.fmatrix('x')
         Layer.x = self.x        # only for debug purpose
-        if multi_output:
-            self.y = T.imatrix('y')
-        else:
-            self.y = T.ivector('y')
+        self.y = T.ivector('y')
 
         self.orig_input = self.x.reshape(self.input_shape)
         self.last_updates = []
@@ -51,13 +46,11 @@ class NNTrainer(object):
         if len(self.layers) == 0:
             # first layer
             params['input_shape'] = self.input_shape
-            print params['input_shape']
             layer = layer_class.build_layer_from_params(
                 params, self.rng, self.orig_input)
         else:
             last_layer = self.layers[-1]
             params['input_shape'] = last_layer.get_output_shape()
-            print params['input_shape']
             layer = layer_class.build_layer_from_params(
                 params, self.rng,
                 last_layer.get_output_train(),
