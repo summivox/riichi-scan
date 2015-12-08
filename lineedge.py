@@ -7,6 +7,8 @@ import os
 import sys
 import cv2
 
+from skimage import measure
+
 from lib.imgproc import *
 from nnlib import driver
 
@@ -38,12 +40,14 @@ def get_edge_mask(img):
     mask = mask / mask.max() * 255
     mask = mask.astype('uint8')
     mask = mask[:,padx:-padx]
+    #show_img_mat(mask)
     mask = cv2.resize(mask, (img.shape[1],img.shape[0]))
     cv2.imwrite('edgemask.png', mask)
     return mask
 
 def process_edge_mask(img, mask):
-    assert img.shape[:2] == mask.shape
+    assert img.shape[:2] == mask.shape, "{}!={}".format(str(img.shape),
+                                                        str(mask.shape))
     ssize = int(float(img.shape[0]) / 40 * 3)
 
     struc1 = cv2.getStructuringElement(cv2.MORPH_RECT, (ssize,1))
@@ -51,14 +55,30 @@ def process_edge_mask(img, mask):
     struc2 = cv2.getStructuringElement(cv2.MORPH_RECT, (1,ssize))
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, struc2)
 
-    _, mask = cv2.threshold(mask, 50, 255, cv2.THRESH_BINARY)
+    _, mask = cv2.threshold(mask, 20, 255, cv2.THRESH_BINARY)
 # transformed mask
     #show_img_mat(mask)
     return mask
 
+def get_blocks(mask):
+    L = measure.label(mask)
+    nL = L.max()
+
+    #colorized = np.zeros(mask.shape + (3,), dtype='uint8')
+    #for k in range(nL):
+        #pts = (L==k)
+        #colorized[pts] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
+    #show_img_mat(colorized)
+
 if __name__ == '__main__':
     im = cv2.imread(sys.argv[1])
+
+    # step 1
     #get_edge_mask(im)
 
+    # step 2
     mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
-    process_edge_mask(im, mask)
+    mask = process_edge_mask(im, mask)
+
+    get_blocks(mask)
+
