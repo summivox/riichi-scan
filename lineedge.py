@@ -6,6 +6,7 @@
 import os
 import sys
 import cv2
+import copy
 
 from skimage import measure
 
@@ -66,9 +67,26 @@ def get_blocks(mask):
 
     #colorized = np.zeros(mask.shape + (3,), dtype='uint8')
     #for k in range(nL):
-        #pts = (L==k)
-        #colorized[pts] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
+        #colorized[L==k] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
     #show_img_mat(colorized)
+
+    ccs = []
+    for k in range(nL):
+        pts = np.nonzero(L==k)
+        pts = np.asarray(pts).transpose().astype('float32')
+        ccs.append(pts.reshape(pts.shape[0],1,2))
+    rects = [(cv2.boundingRect(cc), cc) for cc in ccs]
+    rects = [(Rect(b[1], b[0], b[3] + 1, b[2] + 1), a) for (b, a) in rects]
+    #from IPython import embed; embed()
+    maxw = max([r[0].w for r in rects])
+    rects = [r for r in rects if r[0].w < maxw * 0.8]
+    maxh = max([r[0].h for r in rects])
+    valid_rects = [r for r in rects if r[0].h > maxh * 0.6 and
+                  r[0].w > maxh * 0.3]
+    for r in valid_rects:
+        m = copy.copy(mask)
+        ret = draw_rects(m, [r[0]])
+        show_img_mat(ret)
 
 if __name__ == '__main__':
     im = cv2.imread(sys.argv[1])

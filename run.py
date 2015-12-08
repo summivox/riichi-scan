@@ -74,6 +74,7 @@ def noise_removal(mask):
     log_img('segmask-dilate', dilated)
 
     contours = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    from IPython import embed; embed()
     boxes = [cv2.boundingRect(k) for k in contours[0]]
     rects = [Rect(b[0], b[1], b[2] + 1, b[3] + 1) for b in boxes]
     maxh = max([r.h for r in rects])
