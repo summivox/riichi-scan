@@ -92,5 +92,8 @@ class Rect(object):
         self.y = int(self.y - diffy)
         self.h = int(self.h + 2 * diffy)
 
+    def center(self):
+        return (self.x + self.w * 0.5, self.y + self.h * 0.5)
+
 
     __repr__ = __str__
