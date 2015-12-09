@@ -208,8 +208,8 @@ if __name__ == '__main__':
     expand_line = bbox.safe_roi(img)
     log_img('expand_line', expand_line)
 
-    #edge_mask = lineedge.get_edge_mask(expand_line)
-    edge_mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
+    edge_mask = lineedge.get_edge_mask(expand_line)
+    #edge_mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
     assert edge_mask.shape == expand_line.shape[:2], edge_mask.shape
     log_img('edge_mask_raw', edge_mask)
 

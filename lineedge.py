@@ -93,7 +93,8 @@ if __name__ == '__main__':
 
     # step 1
     em = get_edge_mask(im)
-    cv2.imwrite('edgemask.png', em)
+    show_img_mat(em)
+    #cv2.imwrite('edgemask.png', em)
 
     # step 2
     #mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
