@@ -1,10 +1,4 @@
 
+## Detect and recognize Mahjong Tiles
 
-# Install
-
-## Vagrant
-
-```bash
-vagrant plugin install vagrant-vbguest vagrant-share
-vagrant up
-```
+![poster](https://github.com/summivox/riichi-scan/raw/master/poster.jpg)
