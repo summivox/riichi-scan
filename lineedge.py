@@ -64,16 +64,19 @@ def get_blocks(mask):
     L = measure.label(mask)
     nL = L.max()
 
-    #colorized = np.zeros(mask.shape + (3,), dtype='uint8')
-    #for k in range(nL):
-        #colorized[L==k] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
-    #show_img_mat(colorized)
+    colorized = np.zeros(mask.shape + (3,), dtype='uint8')
+    for k in range(nL):
+        colorized[L==k] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
+    show_img_mat(colorized)
 
     ccs = []
     for k in range(nL):
         pts = np.nonzero(L==k)
         pts = np.asarray(pts).transpose().astype('float32')
         pts = pts[:,::-1]
+        val = mask[pts[0,1],pts[0,0]]
+        if val != 0:
+            continue
         ccs.append(pts.reshape(pts.shape[0],1,2))
     rects = [(cv2.boundingRect(cc), cc) for cc in ccs]
     rects = [(Rect(b[0], b[1], b[2] + 1, b[3] + 1), a) for (b, a) in rects]
@@ -83,6 +86,7 @@ def get_blocks(mask):
                   r[0].w > maxh * 0.3]
     valid_rects = sorted(valid_rects,key=lambda r: r[0].x)
     #for r in valid_rects:
+        #print r[0]
         #m = copy.copy(mask)
         #ret = draw_rects(m, [r[0]])
         #show_img_mat(ret)
@@ -92,13 +96,14 @@ if __name__ == '__main__':
     im = cv2.imread(sys.argv[1])
 
     # step 1
-    em = get_edge_mask(im)
-    show_img_mat(em)
+    #em = get_edge_mask(im)
+    #show_img_mat(em)
     #cv2.imwrite('edgemask.png', em)
 
     # step 2
     #mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
     #mask = process_edge_mask(im, mask)
+    #show_img_mat(mask)
 
     #get_blocks(mask)
 

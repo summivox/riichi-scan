@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 import operator
+from skimage import measure
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 from sklearn.decomposition import PCA
@@ -68,7 +69,7 @@ def get_segmented_img():
 def thresh_segmented_img(img):
     assert img.ndim == 3
     mingray = np.min(img, axis=2)
-    _, mask = cv2.threshold(mingray, 170, 255, cv2.THRESH_BINARY)
+    _, mask = cv2.threshold(mingray, 150, 255, cv2.THRESH_BINARY)
     return mask
 
 def noise_removal(mask):
@@ -76,13 +77,25 @@ def noise_removal(mask):
     dilated = cv2.dilate(mask, dil_kern)
     log_img('segmask-dilate', dilated)
 
-    contours = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    boxes = [cv2.boundingRect(k) for k in contours[0]]
+    L = measure.label(dilated)
+    ccs = []
+    for k in range(L.max()):
+        pts = np.nonzero(L==k)
+        pts = np.asarray(pts).transpose().astype('float32')
+        pts = pts[:,::-1]
+        val = dilated[pts[0,1],pts[0,0]]
+        if val == 0:
+            continue
+        ccs.append(pts.reshape(pts.shape[0],1,2))
+    boxes = [cv2.boundingRect(k) for k in ccs]
     rects = [Rect(b[0], b[1], b[2] + 1, b[3] + 1) for b in boxes]
+    #maxw = max([r.w for r in rects])
+    #maxh = max([r.h for r in rects])
+    #rects = [r for r in rects if r.w != maxw or r.h != maxh]
     maxh = max([r.h for r in rects])
     valid_rects = [r for r in rects if \
-        r.h > maxh * 0.6 \
-       and r.w > img.shape[1] * 0.3] # minimum allowed size for a box
+        r.h > maxh * 0.5 \
+       and r.w > maxh * 0.5] # minimum allowed size for a box
     logger.info("Valid bounding boxes: " + str(valid_rects))
 
     valid_mask = np.zeros(mask.shape, mask.dtype)
@@ -122,7 +135,7 @@ def get_roi_from_edgeblock(blocks, line):
     rois = []
     for r, pts in blocks:
         pts = pts[:,0,:]
-        r.expand(0.05, 0.15)
+        r.expand(0.05, 0.12)
         roi = r.safe_roi(line)
         rois.append(roi)
         #show_img_mat(roi)
@@ -190,6 +203,7 @@ if __name__ == '__main__':
     mask = thresh_segmented_img(seg_img)
     log_img('segmask', mask)
 
+    [mask, img] = rotate(mask, img)
     mask = noise_removal(mask)
     if np.sum(mask) == 0:
         logger.error("Nothing found.")

@@ -54,7 +54,7 @@ def draw_rects(img, rects):
     for r in rects:
         pt1 = (r.x0, r.y0)
         pt2 = (r.x1, r.y1)
-        cv2.rectangle(ret, pt1, pt2, (0,0,255), 1)
+        cv2.rectangle(ret, pt1, pt2, (255,0,0), img.shape[0]/40)
     return ret
 
 def pca_rot(img):
