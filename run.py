@@ -6,19 +6,22 @@
 import cv2
 import sys
 import numpy as np
+import copy
 
 import argparse
 import logging
 import os
 import shutil
 import operator
+from skimage import measure
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+from sklearn.decomposition import PCA
 
 from lib.imgproc import *
-import scan
 
 import nnlib.driver as nn_driver
+import lineedge
 
 TILES = ['1m','1p','1s','1z','2m','2p','2s','2z','3m','3p','3s','3z','4m','4p','4s','4z','5m','5p','5s','5z','6m','6p','6s','6z','7m','7p','7s','7z','8m','8p','8s','9m','9p','9s', 'neg']
 nn_driver.load_model_recog(os.path.join(os.path.dirname(__file__), 'nnlib',
@@ -65,7 +68,7 @@ def get_segmented_img():
 def thresh_segmented_img(img):
     assert img.ndim == 3
     mingray = np.min(img, axis=2)
-    _, mask = cv2.threshold(mingray, 170, 255, cv2.THRESH_BINARY)
+    _, mask = cv2.threshold(mingray, 150, 255, cv2.THRESH_BINARY)
     return mask
 
 def noise_removal(mask):
@@ -73,13 +76,25 @@ def noise_removal(mask):
     dilated = cv2.dilate(mask, dil_kern)
     log_img('segmask-dilate', dilated)
 
-    contours = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    boxes = [cv2.boundingRect(k) for k in contours[0]]
+    L = measure.label(dilated)
+    ccs = []
+    for k in range(L.max()):
+        pts = np.nonzero(L==k)
+        pts = np.asarray(pts).transpose().astype('float32')
+        pts = pts[:,::-1]
+        val = dilated[pts[0,1],pts[0,0]]
+        if val == 0:
+            continue
+        ccs.append(pts.reshape(pts.shape[0],1,2))
+    boxes = [cv2.boundingRect(k) for k in ccs]
     rects = [Rect(b[0], b[1], b[2] + 1, b[3] + 1) for b in boxes]
+    #maxw = max([r.w for r in rects])
+    #maxh = max([r.h for r in rects])
+    #rects = [r for r in rects if r.w != maxw or r.h != maxh]
     maxh = max([r.h for r in rects])
     valid_rects = [r for r in rects if \
-        r.h > maxh * 0.6 \
-       and r.w > img.shape[1] * 0.3] # minimum allowed size for a box
+        r.h > maxh * 0.5 \
+       and r.w > maxh * 0.5] # minimum allowed size for a box
     logger.info("Valid bounding boxes: " + str(valid_rects))
 
     valid_mask = np.zeros(mask.shape, mask.dtype)
@@ -115,17 +130,63 @@ def recog_batch(imgs):
         ret.append((TILES[pred], prob[pred]))
     return ret
 
-def select_guess(results):
-# count neg
-    neg_cnt = [[x[0] for x in r].count('neg') for r in results]
-    logger.info("Negative class cnt: " + str(neg_cnt))
-    min_neg = min(neg_cnt)
-    candidates = [idx for idx, neg in enumerate(neg_cnt) if neg == min_neg]
-    results = [results[k] for k in candidates]
-    mean_scores = [np.mean([x[1] for x in r]) for r in results]
-    logger.info("Recognition mean scores: " + str(mean_scores))
-    max_score_idx = max(enumerate(mean_scores), key=operator.itemgetter(1))[0]
-    return results[max_score_idx]
+def get_roi_from_edgeblock(blocks, line):
+    rois = []
+    for r, pts in blocks:
+        pts = pts[:,0,:]
+        r.expand(0.05, 0.12)
+        roi = r.safe_roi(line)
+        rois.append(roi)
+        #show_img_mat(roi)
+
+        #hull = cv2.convexHull(pts).astype('int32')
+        #empty = np.zeros(mask.shape)
+        #cv2.fillConvexPoly(empty, hull, 1)
+        #pts = np.asarray(empty.nonzero()).transpose()[:,::-1]
+        #show_img_mat(empty)
+        #pca = PCA(n_components=1)
+        #pca.fit(pts)
+        #comp = pca.components_[0]
+        #print comp
+        #rotM, comp = pca_getM_from_comp(r.center(), comp)
+        #rotM = cv2.invertAffineTransform(rotM)
+        #pts3 = np.concatenate((pts, np.ones((pts.shape[0],1))), axis=1)
+        #transformed = np.dot(rotM, pts3.transpose()).transpose()    # nx2
+        #transformed = transformed.reshape((transformed.shape[0],1,2))
+        #newbox = cv2.boundingRect(transformed.astype('float32'))
+        #newbox = (max(x,0) for x in newbox)
+        #newrect = Rect(newbox[0], newbox[1], newbox[2] + 1, newbox[3] + 1)
+        #newrect = r
+        #newline = copy.copy(expand_line)
+        #cv2.warpAffine(expand_line, rotM, (expand_line.shape[1],expand_line.shape[0]),
+                       #newline, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT)
+        #m = draw_rects(newline, [newrect])
+    return rois
+
+def tile_shape_analysis(rois):
+    shapes = [roi.shape[:2] for roi in rois]
+    median = np.median(shapes, axis=0)
+    print median
+    print shapes
+
+    newrois = []
+    for r in rois:
+        if r.shape[1] > median[1] * 1.8:    # two tiles connected
+            mid = r.shape[1] / 2
+            pad = mid * 0.1
+            # split
+            newrois.append(r[:,:mid+pad])
+            newrois.append(r[:,mid-pad:])
+            continue
+        newrois.append(r)
+
+    # rotate
+    def maybe_rotate(img):
+        if img.shape[0] > img.shape[1]:
+            return img
+        return np.rot90(img)
+    newrois = [maybe_rotate(r) for r in newrois]
+    return newrois
 
 if __name__ == '__main__':
     global args
@@ -141,6 +202,7 @@ if __name__ == '__main__':
     mask = thresh_segmented_img(seg_img)
     log_img('segmask', mask)
 
+    [mask, img] = rotate(mask, img)
     mask = noise_removal(mask)
     if np.sum(mask) == 0:
         logger.error("Nothing found.")
@@ -149,56 +211,32 @@ if __name__ == '__main__':
 
 # shrink and rotate:
     bbox = shrink_binary_img(mask)
-    mask = bbox.roi(mask)
-    img = bbox.roi(img)
-
-    # to test line edge
-    #bbox.expand(0.15, 0.15)
-    #expand_line = bbox.safe_roi(orig_img)
-    #log_img('expand_line', expand_line)
 
     [mask, img] = rotate(mask, img)
+    bbox = shrink_binary_img(mask)
     log_img('rotated1', img)
 
-# estimate height
-    heights = np.asarray(all_height(mask), dtype='int')
-    median_height = np.median(heights)
-    logger.info("Median height: " + str(median_height))
+    # to test line edge
+    bbox.expand(0.05, 0.12)
+    expand_line = bbox.safe_roi(img)
+    log_img('expand_line', expand_line)
 
-# pass2: filter by height
-    height_diff_thres = median_height * 0.2
-    w = mask.shape[1]
-    for k in range(w):
-        if abs(heights[k] - median_height) > height_diff_thres:
-            mask[:,k] = 0
-    bbox = shrink_binary_img(mask)
+    edge_mask = lineedge.get_edge_mask(expand_line)
+    #edge_mask = cv2.imread('edgemask.png', cv2.IMREAD_GRAYSCALE)
+    assert edge_mask.shape == expand_line.shape[:2], edge_mask.shape
+    log_img('edge_mask_raw', edge_mask)
 
-    pad = median_height / 1.4 * 0.1
-    bbox.x = max(0, bbox.x0 - pad)
-    bbox.w = min(bbox.x1 + 1 + pad, w) - bbox.x + 1
+    mask = lineedge.process_edge_mask(expand_line, edge_mask)
+    log_img('morph_edge_mask', mask)
+    blocks = lineedge.get_blocks(mask)   # rect, points
+    rois = get_roi_from_edgeblock(blocks, expand_line)
 
-    mask = bbox.roi(mask)
-    img = bbox.roi(img)
-    log_img('mask2', mask)
+    rois = tile_shape_analysis(rois)
 
-    [mask, img] = rotate(mask, img)
-    log_img('rotated2', img)
+    for idx,r in enumerate(rois):
+        log_img('tile{}'.format(idx), r)
 
-    large_ratio = img.shape[1] * 1.0 / img.shape[0]
+    results = recog_batch(rois)
+    print results
 
-    n_guess_min = int(large_ratio * TILE_RATIO_RANGE[0])
-    n_guess_max = int(large_ratio * TILE_RATIO_RANGE[1])
-    logger.info("Guess number: {}~{}".format(n_guess_min, n_guess_max))
-    ress = []
-    for n_tile in range(n_guess_min, n_guess_max+1):
-        splits = scan.split(img, n_tile)
-        res = recog_batch(splits)
-        ress.append(res)
-        logger.info("Ans for n_tile={}: {}".format(n_tile, str(res)))
-    res = select_guess(ress)
-    ntile = len(res)
-    logger.info("NTILE={}".format(ntile))
-    splits = scan.split(img, ntile)
-    for idx, k in enumerate(splits):
-        log_img('tile{}'.format(idx), k)
-    print res
+
