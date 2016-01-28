@@ -67,7 +67,7 @@ def get_blocks(mask):
     colorized = np.zeros(mask.shape + (3,), dtype='uint8')
     for k in range(nL):
         colorized[L==k] = (np.random.rand()*255,np.random.rand()*255,np.random.rand() * 255)
-    show_img_mat(colorized)
+    #show_img_mat(colorized)
 
     ccs = []
     for k in range(nL):
